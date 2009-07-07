@@ -1,4 +1,4 @@
-from base import Report, HOURLY
+from base import Report, Hourly
 import os, re
 
 load_average_re = re.compile('load average: ([\d.]+)')
@@ -15,7 +15,13 @@ class LoadAverage(Report):
 class CreatedUsers(Report):
     slug = 'user_accounts'
     name = 'User accounts'
+    frequency = Hourly()
     
+    def earliest_date(self):
+        from django.db.models import Min
+        from expenses.models import User
+        return User.objects.aggregate(x = Min('created'))['x']
+
     def value_at(self, dt):
         from expenses.models import User
         return User.objects.filter(created__lt = dt).count()

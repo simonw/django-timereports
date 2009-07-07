@@ -16,4 +16,7 @@ class Point(models.Model):
     
     def __unicode__(self):
         return u'%s: %s' % (self.sampled, self.value)
+    
+    class Meta:
+        ordering = ('sampled',)
 

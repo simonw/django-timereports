@@ -1,35 +1,49 @@
 import datetime
 import models
 
-def MINUTELY(self, dt):
-    return dt.replace(microsecond = 0, second = 0)
+class Secondly(object):
+    def round_down(self, dt):
+        return dt.replace(microsecond = 0)
+    timedelta = datetime.timedelta(seconds = 1)
 
-def HOURLY(self, dt):
-    return dt.replace(microsecond = 0, second = 0, minute = 0)
+class Minutely(object):
+    def round_down(self, dt):
+        return dt.replace(microsecond = 0, second = 0)
+    timedelta = datetime.timedelta(seconds = 60)
 
-def DAILY(self, dt):
-    return dt.replace(microsecond = 0, second = 0, minute = 0, hour = 0)
+class Hourly(object):
+    def round_down(self, dt):
+        return dt.replace(microsecond = 0, second = 0, minute = 0)
+    timedelta = datetime.timedelta(seconds = 60 * 60)
+
+class Daily(object):
+    def round_down(self, dt):
+        return dt.replace(microsecond = 0, second = 0, minute = 0)
+    timedelta = datetime.timedelta(seconds = 60 * 60 * 24)
 
 class Report(object):
     slug = None
     name = None
     description = ''
     units = ''
-    frequency = lambda self, x: x
+    frequency = Secondly()
 
     def value(self):
         raise NotImplementedError
 
     def value_at(self, dt):
         raise NotImplementedError
-
     value_at.not_implemented = True
+    
+    def earliest_date(self):
+        raise NotImplementedError
+    earliest_date.not_implemented = True
     
     def current_point(self):
         if hasattr(self.value_at, 'not_implemented'):
             return datetime.datetime.now(), self.value()
         else:
-            dt = self.frequency(datetime.datetime.now())
+            dt = self.frequency.round_down(datetime.datetime.now())
             return dt, self.value_at(dt)
     
     def record(self):
@@ -39,9 +53,18 @@ class Report(object):
 
     def record_at(self, dt):
         report = self.get_db_object()
-        dt = self.frequency(dt)
+        dt = self.frequency.round_down(dt)
         value = self.value_at(dt)
         report.points.get_or_create(sampled = dt, defaults = {'value': value})
+    
+    def backfill(self):
+        earliest_date = self.frequency.round_down(self.earliest_date())
+        timedelta = self.frequency.timedelta
+        
+        current = earliest_date
+        while current < datetime.datetime.now():
+            self.record_at(current)
+            current += timedelta
     
     def get_db_object(self):
         return models.Report.objects.get_or_create(
