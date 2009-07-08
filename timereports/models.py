@@ -19,4 +19,3 @@ class Point(models.Model):
     
     class Meta:
         ordering = ('sampled',)
-

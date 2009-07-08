@@ -25,4 +25,3 @@ class CreatedUsers(Report):
     def value_at(self, dt):
         from expenses.models import User
         return User.objects.filter(created__lt = dt).count()
-
