@@ -1,5 +1,7 @@
 import datetime
 import models
+import pygooglechart
+from django.utils import dateformat
 
 class Secondly(object):
     def round_down(self, dt):
@@ -108,6 +110,47 @@ class DateGraph(object):
         )['m']
         return DateGraph(self.report, earliest, latest)
     
+    def horizontal_labels(self, num_labels=11):
+        points = list(self)
+        gap = len(points) / float(num_labels - 1)
+        labels = []
+        for i in range(num_labels - 1):
+            labels.append(points[int(gap * i)][0])
+        # And the very last label in the sequence:
+        labels.append(points[-1][0])
+        return labels
+    
+    def max_value(self):
+        return max([m[1] for m in self])
+    
+    def vertical_labels(self, num_labels=6):
+        max_value = self.max_value()
+        gap = max_value / float(num_labels - 1)
+        labels = []
+        for i in range(num_labels - 1):
+            labels.append(int(gap * i))
+        # And the very last label in the sequence:
+        labels.append(int(max_value))
+        return labels
+    
+    def google_chart(self):
+        points = list(self)
+        chart = pygooglechart.SimpleLineChart(800, 200, y_range = [0, self.max_value()])
+        chart.add_data([p[1] for p in points])
+        horizontal_labels = [
+            dateformat.format(l, 'j M g:00') for l in self.horizontal_labels()
+        ]
+        chart.set_axis_labels(pygooglechart.Axis.BOTTOM, horizontal_labels)
+        chart.set_axis_labels(pygooglechart.Axis.LEFT, self.vertical_labels())
+        chart.set_grid(10, 20, 5, 2)
+        # 10 = 10 vertical grid lines (10% gap between each)
+        # 20 = 5 horizontal grid lines (20% gap between each)
+        # 5, 2 = dashed lines, 5 pixels dash to 2 pixels blank
+        return chart
+
+    def google_chart_url(self):
+        return self.google_chart().get_url()
+
     def __iter__(self):
         assert self.start is not None, '.start property must be set'
         assert self.end is not None, '.end property must be set'
@@ -133,3 +176,4 @@ class DateGraph(object):
             yield (current, value)
             last_yielded = value
             current += timedelta
+
